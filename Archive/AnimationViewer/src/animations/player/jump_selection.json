@@ -1,0 +1,81 @@
+{
+  "animation": "jump",
+  "sheet": "..\\..\\..\\..\\Assests\\Sword Master Sprite Sheet 90x37.png",
+  "frame_size": [
+    90,
+    37
+  ],
+  "margin": 0,
+  "spacing": 0,
+  "rows": 27,
+  "cols": 10,
+  "order": "selection-order",
+  "frames": [
+    {
+      "x": 0,
+      "y": 481,
+      "w": 90,
+      "h": 37,
+      "row": 13,
+      "col": 0,
+      "trimmed": {
+        "x": 22,
+        "y": 490,
+        "w": 12,
+        "h": 23
+      },
+      "offset": {
+        "x": 22,
+        "y": 9
+      },
+      "pivot": {
+        "x": 6,
+        "y": 22
+      }
+    },
+    {
+      "x": 90,
+      "y": 481,
+      "w": 90,
+      "h": 37,
+      "row": 13,
+      "col": 1,
+      "trimmed": {
+        "x": 112,
+        "y": 490,
+        "w": 12,
+        "h": 23
+      },
+      "offset": {
+        "x": 22,
+        "y": 9
+      },
+      "pivot": {
+        "x": 6,
+        "y": 22
+      }
+    },
+    {
+      "x": 180,
+      "y": 481,
+      "w": 90,
+      "h": 37,
+      "row": 13,
+      "col": 2,
+      "trimmed": {
+        "x": 202,
+        "y": 490,
+        "w": 12,
+        "h": 23
+      },
+      "offset": {
+        "x": 22,
+        "y": 9
+      },
+      "pivot": {
+        "x": 6,
+        "y": 22
+      }
+    }
+  ]
+}

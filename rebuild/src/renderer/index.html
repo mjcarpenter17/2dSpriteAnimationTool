@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>AnimationViewer Rebuild</title>
+  <style>
+    body, html, #root { margin:0; padding:0; height:100%; font-family: Arial, sans-serif; }
+    .layout { display:grid; grid-template-columns: 240px 1fr 300px; grid-template-rows: 1fr 24px; height:100%; }
+    .panel { padding:8px; overflow:auto; border-right:1px solid #333; }
+    .panel:last-child { border-right:none; }
+    .status { grid-column: 1 / span 3; background:#222; color:#ddd; font-size:12px; display:flex; align-items:center; padding:0 8px; }
+    .grid-canvas { background:#111; border:1px solid #444; width:100%; height:600px; position:relative; }
+    .frame-rect { position:absolute; box-sizing:border-box; border:1px solid rgba(255,255,255,0.2); font-size:10px; color:#fff; display:flex; align-items:center; justify-content:center; }
+    .frame-selected { border:2px solid #4fa3ff; }
+    .order-badge { position:absolute; top:0; left:0; background:#4fa3ff; color:#000; font-size:9px; padding:1px 3px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="./index.tsx"></script>
+</body>
+</html>
