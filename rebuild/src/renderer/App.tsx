@@ -8,6 +8,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
 import { AnimationsPane } from './components/AnimationsPane';
+import { SliceLegend } from './components/SliceLegend';
 import './styles.css';
 
 // Global app state instance
@@ -88,28 +89,16 @@ function App() {
 
     setupSheetLoader();
     loadPreferences();
-    // Theme initial load
+    // Theme initial load + listener
     (async () => {
       try {
         const th = await (window as any).api.invoke('theme:get');
         if (th === 'dark' || th === 'light') setTheme(th);
       } catch {}
+      if ((window as any).api?.onThemeChanged) {
+        (window as any).api.onThemeChanged((t: 'light' | 'dark') => setTheme(t));
+      }
     })();
-    // Theme change listener
-    (window as any).api.send && window.api.openSheetListener(()=>{}); // ensure api present
-    (window as any).api && (window as any).api.invoke; // no-op keep
-    window.addEventListener('theme:changed' as any, ()=>{}); // placeholder
-    (window as any).api && (window as any).api.send; // placeholder
-    (window as any).api && (window as any).api.invoke; // placeholder
-    (window as any).api && (window as any).api.send; // placeholder
-    (window as any).api && (window as any).api.send; // placeholder
-    (window as any).api && (window as any).api.openSheetListener; // placeholder
-    // Use ipc event
-    (window as any).api && (window as any).api.send; // placeholder
-    (window as any).api && (window as any).api.send; // placeholder
-    (window as any).api && (window as any).api.send; // placeholder
-    // direct listener
-    (window as any).api && requireThemeListener();
     setupKeyboardHandlers();
     setupMouseHandlers();
 
@@ -165,13 +154,7 @@ function App() {
     // Implementation would go here
   };
 
-  const requireThemeListener = () => {
-    if (!(window as any).api) return;
-    (window as any).api.openSheetListener(()=>{}); // ensure channel binding executed at least once
-    const { ipcRenderer } = (window as any).require ? (window as any) : {};
-    // Fallback: listen to DOM event via preload send; simpler: attach electron listener through global event emitter? For now rely on direct send 'theme:changed'
-    (window as any).api && (window as any).api.send; // placeholder
-  };
+  const requireThemeListener = () => {};
 
   const setupKeyboardHandlers = () => {
     const onKey = (e: KeyboardEvent) => {
@@ -277,7 +260,12 @@ function App() {
           pointerEvents: 'auto'
         }}
       >
-        {rects.map((rect) => (
+        {rects.map((rect) => {
+          const ov = appState.overrides.getSheet(sheetContext.sheet.path);
+          const hasPivot = !!ov.getPivot(rect.index);
+          const hasTrim = !!ov.getTrim(rect.index);
+          const title = hasPivot || hasTrim ? `Overrides: ${[hasPivot? 'pivot': null, hasTrim? 'trim': null].filter(Boolean).join(', ')}` : undefined;
+          return (
           <div
             key={rect.index}
             className={`frame-rect ${sheetContext.selection.isSelected(rect.index) ? 'frame-selected' : ''}`}
@@ -289,11 +277,12 @@ function App() {
               height: rect.h,
               border: sheetContext.selection.isSelected(rect.index) 
                 ? '2px solid #00ffff' 
-                : '1px solid rgba(255, 255, 255, 0.3)',
+                : '1px solid var(--grid-border)',
               cursor: 'pointer',
               pointerEvents: 'all'
             }}
             onClick={(e) => toggleSelect(rect.index, e)}
+            title={title}
           >
             {sheetContext.selection.isSelected(rect.index) && (
               <span 
@@ -314,7 +303,7 @@ function App() {
               </span>
             )}
           </div>
-        ))}
+        );})}
       </div>
     );
   };
@@ -509,6 +498,7 @@ function App() {
                 </div>
               </div>
             )}
+            <SliceLegend visible={showSlices} />
           </div>
         </div>
 
