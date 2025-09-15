@@ -34,6 +34,8 @@ Evidence: Working renderer layout, selection visuals, persisted prefs file.
 - Overrides versioned persistence (`__version`) + skip-on-mismatch safety + decision log entries
 - Tests: pivot precedence, trim override vs auto, transparent frame null trim edge case
 - Strict null safety adjustments in renderer hot paths (frameRect guards)
+ - Baseline theming: light/dark mode toggle (menu + toolbar) with persisted `ui.theme`
+ - Grid contrast update: light mode grid lines black; dark mode light gray; CSS variable palette introduced
 
 ### Remaining for Phase 2 Closure
 1. Animations Pane enhancements: Refresh (F5), read-only badge placeholder, grouping stub
@@ -191,7 +193,7 @@ Exit Criteria:
 | 6     | NOT STARTED | Advanced systems pending |
 
 ## Immediate Focus Recommendation
-Proceed with Trim override interaction → Undo/Redo scaffold → Slice model foundation. Establish solid editing semantics before parser/export complexity.
+Complete remaining Phase 2 polish (Animations Pane read-only badge, duration UI refinement, micro-benchmark harness, tooltips/legend) and add theme change listener refinement (optional) before starting Aseprite parser.
 
 ### Active Decisions To Reflect
 See DECISIONS.md: override storage, stack selection, performance budgets, export key ordering.

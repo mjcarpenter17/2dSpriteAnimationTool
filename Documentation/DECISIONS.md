@@ -173,6 +173,33 @@ Phase 2 slice foundation tasks; Phase 3 Aseprite parser mapping.
 Central log of architectural and process decisions. Follow the template. Append new entries at the top (reverse chronological) for fast visibility. Keep entries concise; link to issues or PRs for depth.
 
 ---
+### 2025-09-14 Light/Dark Theme & Grid Contrast Strategy
+Status: accepted
+Tags: ui, accessibility, styling
+Context:
+Requested higher-contrast grid on light background (current semi‑transparent white lines were low visibility) and a dark mode variant with appropriately subtle grid lines. Needed a lightweight approach that: (a) avoids repaint cost, (b) keeps future theming extensible (panel resizing & HUD in Phase 6), (c) persists user choice across sessions without introducing a styling framework.
+Options Considered:
+1. Inline style overrides per component (hard‑code black / gray borders; no persistence).
+2. CSS custom properties (variables) with root `.theme-dark` class + preference persistence + toolbar & menu toggle (chosen).
+3. Adopt a theming library (styled-components / MUI) to manage palettes & dark mode switch.
+Decision:
+Implemented option (2). Added `ui.theme` (light|dark) to preferences, IPC channels `theme:get` & `theme:set`, a View menu toggle, and an in‑toolbar button. Introduced CSS variable set for backgrounds, borders, text, and grid line colors. Grid border color now `#000` (light) and `#bbb` (dark) with hover shades via `--grid-border-hover`. Panels and toolbar consume variables; selected frame cyan highlight unchanged for continuity.
+Rejected Because:
+- (1) Duplicates color definitions & provides no persistence; scatters theme logic.
+- (3) Adds dependency & abstraction overhead early; premature before broader styling complexity.
+Consequences:
++ Minimal surface area; easy expansion (add vars only).
++ Immediate contrast improvement & user preference persistence.
++ No new third‑party runtime dependency.
+- Theme change listener currently one‑way (renderer sets & waits for broadcast); lacks dedicated typed IPC subscription helper.
+- No automated visual regression test yet; relies on manual verification.
+Follow-Up:
+- Add renderer listener abstraction (e.g., `api.onThemeChanged(cb)` in preload) instead of generic send.
+- Extend variable set (accent, selection, warning) when HUD/onion skin UI added.
+- Consider high‑contrast accessibility theme variant if requested.
+Related:
+`PreferencesManager.ts` (ui.theme), `main.ts` (menu toggle & IPC), `styles.css` (variables, .theme-dark), `Toolbar.tsx`, `App.tsx` (theme state & button).
+
 ### 2025-09-14 Animations Pane Refresh & Selection Ordering Model
 Status: accepted
 Tags: ui, data, workflow
