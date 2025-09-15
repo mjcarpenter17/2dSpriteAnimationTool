@@ -10,6 +10,7 @@ interface ToolbarProps {
   onToggleSlices: () => void;
   onPivotStrategyChange: (strategy: string) => void;
   onZoomReset: () => void;
+  extraButtons?: React.ReactNode;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -21,7 +22,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onTogglePivot,
   onToggleSlices,
   onPivotStrategyChange,
-  onZoomReset
+  onZoomReset,
+  extraButtons
 }) => {
   return (
     <div style={{ 
@@ -29,8 +31,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       alignItems: 'center', 
       gap: '8px', 
       padding: '8px', 
-      background: '#f8f8f8', 
-      borderBottom: '1px solid #ddd' 
+      background: 'var(--panel-bg)', 
+      borderBottom: '1px solid var(--panel-border)'
     }}>
       <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
         <input 
@@ -69,12 +71,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <option value="top-left">Top Left</option>
       </select>
       
-      <button 
-        onClick={onZoomReset}
-        style={{ marginLeft: 'auto' }}
-      >
-        Reset Zoom
-      </button>
+      <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+        <button onClick={onZoomReset}>Reset Zoom</button>
+        {extraButtons}
+      </div>
     </div>
   );
 };

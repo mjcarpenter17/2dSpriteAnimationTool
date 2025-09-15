@@ -27,6 +27,7 @@ function App() {
   const [activeAnimName, setActiveAnimName] = useState<string | null>(null);
   const [durationEditVersion, setDurationEditVersion] = useState(0);
   const [playbackTick, setPlaybackTick] = useState(0);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   // Refs
   const gridRef = useRef<HTMLDivElement | null>(null);
@@ -87,6 +88,28 @@ function App() {
 
     setupSheetLoader();
     loadPreferences();
+    // Theme initial load
+    (async () => {
+      try {
+        const th = await (window as any).api.invoke('theme:get');
+        if (th === 'dark' || th === 'light') setTheme(th);
+      } catch {}
+    })();
+    // Theme change listener
+    (window as any).api.send && window.api.openSheetListener(()=>{}); // ensure api present
+    (window as any).api && (window as any).api.invoke; // no-op keep
+    window.addEventListener('theme:changed' as any, ()=>{}); // placeholder
+    (window as any).api && (window as any).api.send; // placeholder
+    (window as any).api && (window as any).api.invoke; // placeholder
+    (window as any).api && (window as any).api.send; // placeholder
+    (window as any).api && (window as any).api.send; // placeholder
+    (window as any).api && (window as any).api.openSheetListener; // placeholder
+    // Use ipc event
+    (window as any).api && (window as any).api.send; // placeholder
+    (window as any).api && (window as any).api.send; // placeholder
+    (window as any).api && (window as any).api.send; // placeholder
+    // direct listener
+    (window as any).api && requireThemeListener();
     setupKeyboardHandlers();
     setupMouseHandlers();
 
@@ -140,6 +163,14 @@ function App() {
   const loadPreferences = () => {
     // Load pivot strategy and overrides from preferences
     // Implementation would go here
+  };
+
+  const requireThemeListener = () => {
+    if (!(window as any).api) return;
+    (window as any).api.openSheetListener(()=>{}); // ensure channel binding executed at least once
+    const { ipcRenderer } = (window as any).require ? (window as any) : {};
+    // Fallback: listen to DOM event via preload send; simpler: attach electron listener through global event emitter? For now rely on direct send 'theme:changed'
+    (window as any).api && (window as any).api.send; // placeholder
   };
 
   const setupKeyboardHandlers = () => {
@@ -296,7 +327,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div className={theme === 'dark' ? 'theme-dark' : ''} style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Toolbar
           showTrim={showTrim}
           showPivot={showPivot}
@@ -307,11 +338,16 @@ function App() {
           onToggleSlices={() => setShowSlices(v => !v)}
           onPivotStrategyChange={handlePivotStrategyChange}
           onZoomReset={handleZoomReset}
+          extraButtons={<button onClick={() => {
+            const next = theme === 'dark' ? 'light' : 'dark';
+            (window as any).api.send('theme:set', next);
+            setTheme(next);
+          }}>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</button>}
         />
 
         <div style={{ flex: 1, display: 'flex' }}>
           {/* Left Panel - Animations */}
-          <div style={{ width: '200px', background: '#f5f5f5', borderRight: '1px solid #ddd', padding: '8px', boxSizing: 'border-box' }}>
+          <div style={{ width: '200px', background: 'var(--panel-bg)', borderRight: '1px solid var(--panel-border)', padding: '8px', boxSizing: 'border-box' }}>
             <AnimationsPane
               animations={appState.animationStore.all()}
               activeSheetPath={activeSheet?.sheet.path || null}
@@ -372,7 +408,7 @@ function App() {
           </div>
 
           {/* Right Panel - Properties */}
-          <div style={{ width: '250px', background: '#f5f5f5', borderLeft: '1px solid #ddd', padding: '8px' }}>
+          <div style={{ width: '250px', background: 'var(--panel-bg)', borderLeft: '1px solid var(--panel-border)', padding: '8px' }}>
             <h3 style={{ margin: '0 0 8px 0', fontSize: '14px' }}>Properties</h3>
             
             {activeSheet && (

@@ -9,5 +9,11 @@ contextBridge.exposeInMainWorld('api', {
 });
 
 declare global {
-  interface Window { api: { openSheetListener(cb: (data: { path: string }) => void): void; invoke(channel: string, ...args:any[]): Promise<any>; send(channel: string, ...args:any[]): void; } }
+  interface Window { 
+    api: { 
+      openSheetListener(cb: (data: { path: string }) => void): void; 
+      invoke(channel: string, ...args:any[]): Promise<any>; 
+      send(channel: string, ...args:any[]): void;
+    } 
+  }
 }

@@ -39,6 +39,7 @@ function createWindow() {
 }
 
 function buildMenu() {
+  const toggleDarkLabel = prefs.getTheme() === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
   const template: Electron.MenuItemConstructorOptions[] = [
     {
       label: 'File',
@@ -57,7 +58,21 @@ function buildMenu() {
       ]
     },
     { label: 'Edit', submenu: [ { role: 'copy' } ] },
-  { label: 'View', submenu: [ { role: 'reload' }, { role: 'toggleDevTools' } ] },
+    { label: 'View', submenu: [ 
+      { role: 'reload' }, 
+      { role: 'toggleDevTools' },
+      { type: 'separator' },
+      { 
+        id: 'toggle-dark-mode',
+        label: toggleDarkLabel,
+        click: () => {
+          const next = prefs.getTheme() === 'dark' ? 'light' : 'dark';
+          prefs.setTheme(next);
+          if (mainWindow) mainWindow.webContents.send('theme:changed', next);
+          buildMenu();
+        }
+      }
+    ] },
     { label: 'Animation', submenu: [] },
     { label: 'Help', submenu: [ { label: 'About', click: () => dialog.showMessageBox({ message: 'AnimationViewer Rebuild Shell' }) } ] }
   ];
@@ -107,4 +122,14 @@ ipcMain.on('overrides:setAll', (_e, payload: any) => {
 
 ipcMain.on('debug:log', (_e, msg: any, ...rest: any[]) => {
   console.log('[renderer-log]', msg, ...rest);
+});
+
+ipcMain.handle('theme:get', () => {
+  return prefs.getTheme();
+});
+
+ipcMain.on('theme:set', (_e, theme: 'light' | 'dark') => {
+  prefs.setTheme(theme);
+  if (mainWindow) mainWindow.webContents.send('theme:changed', prefs.getTheme());
+  buildMenu();
 });

@@ -7,6 +7,9 @@ export type Preferences = {
     window_width: number;
     window_height: number;
   };
+  ui?: {
+    theme?: 'light' | 'dark';
+  };
   file_management: {
     recent_sprite_sheets: string[];
     recent_files_limit: number;
@@ -30,6 +33,7 @@ export type Preferences = {
 
 const DEFAULTS: Preferences = {
   layout: { window_width: 1280, window_height: 800 },
+  ui: { theme: 'light' },
   file_management: { recent_sprite_sheets: [], recent_files_limit: 10, last_active_sheet: null },
   analysis: { pivot_strategy: 'bottom-center' }
 };
@@ -84,6 +88,16 @@ export class PreferencesManager {
   setPivotStrategy(strategy: string) {
     if (!this.data.analysis) this.data.analysis = {};
     this.data.analysis.pivot_strategy = strategy;
+    this.save();
+  }
+
+  getTheme(): 'light' | 'dark' {
+    return this.data.ui?.theme === 'dark' ? 'dark' : 'light';
+  }
+
+  setTheme(theme: 'light' | 'dark') {
+    if (!this.data.ui) this.data.ui = {};
+    this.data.ui.theme = theme;
     this.save();
   }
 
