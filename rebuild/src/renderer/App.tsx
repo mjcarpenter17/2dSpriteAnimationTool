@@ -394,6 +394,9 @@ function App() {
                     value={activeSheet.sheet.params.tileWidth} 
                     onChange={(e) => {
                       activeSheet.sheet.setParams({ tileWidth: parseInt(e.target.value) || 32 });
+                      // Prune overrides invalidated by reduced frame count
+                      const count = activeSheet.sheet.frameCount();
+                      appState.overrides.getSheet(activeSheet.sheet.path).pruneInvalid((idx)=> idx < count);
                       forceUpdate();
                     }}
                   />
@@ -403,6 +406,8 @@ function App() {
                     value={activeSheet.sheet.params.tileHeight} 
                     onChange={(e) => {
                       activeSheet.sheet.setParams({ tileHeight: parseInt(e.target.value) || 32 });
+                      const count = activeSheet.sheet.frameCount();
+                      appState.overrides.getSheet(activeSheet.sheet.path).pruneInvalid((idx)=> idx < count);
                       forceUpdate();
                     }}
                   />
@@ -412,6 +417,8 @@ function App() {
                     value={activeSheet.sheet.params.margin} 
                     onChange={(e) => {
                       activeSheet.sheet.setParams({ margin: parseInt(e.target.value) || 0 });
+                      const count = activeSheet.sheet.frameCount();
+                      appState.overrides.getSheet(activeSheet.sheet.path).pruneInvalid((idx)=> idx < count);
                       forceUpdate();
                     }}
                   />
@@ -421,6 +428,8 @@ function App() {
                     value={activeSheet.sheet.params.spacing} 
                     onChange={(e) => {
                       activeSheet.sheet.setParams({ spacing: parseInt(e.target.value) || 0 });
+                      const count = activeSheet.sheet.frameCount();
+                      appState.overrides.getSheet(activeSheet.sheet.path).pruneInvalid((idx)=> idx < count);
                       forceUpdate();
                     }}
                   />
