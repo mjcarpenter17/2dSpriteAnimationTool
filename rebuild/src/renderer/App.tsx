@@ -234,77 +234,45 @@ function App() {
     // Save to preferences and trigger re-analysis if needed
   };
 
-  // Grid rendering function
+  // Grid rendering function (returns frame rectangles only; outer wrapper handles transform)
   const renderGrid = (sheetContext: SheetContext) => {
     const rects = sheetContext.sheet.allFrameRects();
-    const zoomMgr = appState.zoomMgr;
-
     const toggleSelect = (index: number, e: React.MouseEvent) => {
-      sheetContext.selection.click(index, { 
-        ctrl: e.ctrlKey, 
-        shift: e.shiftKey 
-      });
+      sheetContext.selection.click(index, { ctrl: e.ctrlKey, shift: e.shiftKey });
       forceUpdate();
     };
-
     return (
-      <div 
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: sheetContext.sheet.width,
-          height: sheetContext.sheet.height,
-          transform: `translate(${zoomMgr.offsetX}px, ${zoomMgr.offsetY}px) scale(${zoomMgr.scale})`,
-          transformOrigin: '0 0',
-          pointerEvents: 'auto'
-        }}
-      >
-        {rects.map((rect) => {
+      <>
+        {rects.map(rect => {
           const ov = appState.overrides.getSheet(sheetContext.sheet.path);
-          const hasPivot = !!ov.getPivot(rect.index);
-          const hasTrim = !!ov.getTrim(rect.index);
-          const title = hasPivot || hasTrim ? `Overrides: ${[hasPivot? 'pivot': null, hasTrim? 'trim': null].filter(Boolean).join(', ')}` : undefined;
-          return (
-          <div
-            key={rect.index}
-            className={`frame-rect ${sheetContext.selection.isSelected(rect.index) ? 'frame-selected' : ''}`}
-            style={{
-              position: 'absolute',
-              left: rect.x,
-              top: rect.y,
-              width: rect.w,
-              height: rect.h,
-              border: sheetContext.selection.isSelected(rect.index) 
-                ? '2px solid #00ffff' 
-                : '1px solid var(--grid-border)',
-              cursor: 'pointer',
-              pointerEvents: 'all'
-            }}
-            onClick={(e) => toggleSelect(rect.index, e)}
-            title={title}
-          >
-            {sheetContext.selection.isSelected(rect.index) && (
-              <span 
-                className="order-badge"
+            const hasPivot = !!ov.getPivot(rect.index);
+            const hasTrim = !!ov.getTrim(rect.index);
+            const title = hasPivot || hasTrim ? `Overrides: ${[hasPivot? 'pivot': null, hasTrim? 'trim': null].filter(Boolean).join(', ')}` : undefined;
+            return (
+              <div
+                key={rect.index}
+                className={`frame-rect ${sheetContext.selection.isSelected(rect.index) ? 'frame-selected' : ''}`}
                 style={{
                   position: 'absolute',
-                  top: -1,
-                  left: -1,
-                  background: '#00ffff',
-                  color: '#000',
-                  fontSize: '10px',
-                  padding: '1px 4px',
-                  borderRadius: '0 0 3px 0',
-                  fontWeight: 'bold'
+                  left: rect.x,
+                  top: rect.y,
+                  width: rect.w,
+                  height: rect.h,
+                  border: sheetContext.selection.isSelected(rect.index) ? '2px solid #00ffff' : '1px solid var(--grid-border)',
+                  cursor: 'pointer',
+                  pointerEvents: 'all'
                 }}
+                onClick={(e) => toggleSelect(rect.index, e)}
+                title={title}
               >
-                {sheetContext.selection.order.indexOf(rect.index) + 1}
-              </span>
-            )}
-          </div>
-        );})}
-      </div>
+                {sheetContext.selection.isSelected(rect.index) && (
+                  <span className="order-badge" style={{ position: 'absolute', top: -1, left: -1, background: '#00ffff', color: '#000', fontSize: '10px', padding: '1px 4px', borderRadius: '0 0 3px 0', fontWeight: 'bold' }}>
+                    {sheetContext.selection.order.indexOf(rect.index) + 1}
+                  </span>
+                )}
+              </div>
+          );})}
+      </>
     );
   };
 
@@ -363,36 +331,16 @@ function App() {
 
           {/* Center Panel - Grid */}
           <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-            <div
-              ref={gridRef}
-              style={{
-                width: '100%',
-                height: '100%',
-                backgroundColor: hasAnySheetLoaded ? 'transparent' : '#e0e0e0',
-                backgroundImage: hasAnySheetLoaded ? `url(${activeSheet?.image.src})` : 'none',
-                backgroundRepeat: 'no-repeat',
-                backgroundSize: hasAnySheetLoaded ? `${(appState.zoomMgr.scale * 100)}%` : 'auto',
-                backgroundPosition: hasAnySheetLoaded ? 
-                  `${appState.zoomMgr.offsetX}px ${appState.zoomMgr.offsetY}px` : 
-                  'center center',
-                cursor: isPanningRef.current ? 'grabbing' : 'grab'
-              }}
-            >
+            <div ref={gridRef} style={{ width: '100%', height: '100%', background: hasAnySheetLoaded ? 'transparent' : '#e0e0e0', cursor: isPanningRef.current ? 'grabbing' : 'grab' }}>
               {!hasAnySheetLoaded && (
-                <div style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  color: '#666',
-                  fontSize: '18px'
-                }}>
-                  Open a sprite sheet to get started
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#666', fontSize: '18px' }}>Open a sprite sheet to get started</div>
+              )}
+              {hasAnySheetLoaded && activeSheet && (
+                <div style={{ position: 'absolute', left:0, top:0, width: activeSheet.sheet.width, height: activeSheet.sheet.height, transform: `translate(${appState.zoomMgr.offsetX}px, ${appState.zoomMgr.offsetY}px) scale(${appState.zoomMgr.scale})`, transformOrigin: '0 0' }}>
+                  <img src={activeSheet.image.src} style={{ position: 'absolute', left:0, top:0, width: activeSheet.sheet.width, height: activeSheet.sheet.height, userSelect:'none', pointerEvents:'none' }} />
+                  {renderGrid(activeSheet)}
                 </div>
               )}
-              
-              {/* Render grid overlay */}
-              {hasAnySheetLoaded && activeSheet && renderGrid(activeSheet)}
             </div>
           </div>
 

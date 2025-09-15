@@ -33,14 +33,17 @@ export class SpriteSheet {
     const { tileWidth, margin, spacing } = this.params;
     if (tileWidth <= 0) return 0;
     const innerWidth = this.width - margin * 2;
-    return Math.max(0, Math.floor((innerWidth + spacing) / (tileWidth + spacing)));
+    if (innerWidth < tileWidth) return 0;
+    // Fit only full tiles: first tile guaranteed, then see how many additional (tile+spacing) segments fit
+    return 1 + Math.floor((innerWidth - tileWidth) / (tileWidth + spacing));
   }
 
   get rows(): number {
     const { tileHeight, margin, spacing } = this.params;
     if (tileHeight <= 0) return 0;
     const innerHeight = this.height - margin * 2;
-    return Math.max(0, Math.floor((innerHeight + spacing) / (tileHeight + spacing)));
+    if (innerHeight < tileHeight) return 0;
+    return 1 + Math.floor((innerHeight - tileHeight) / (tileHeight + spacing));
   }
 
   frameCount(): number { return this.rows * this.columns; }
