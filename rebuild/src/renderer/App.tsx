@@ -198,14 +198,19 @@ function App() {
   const setupMouseHandlers = () => {
     const onWheel = (e: WheelEvent) => {
       if (!appState.getActiveSheet() || !gridRef.current || !e.ctrlKey) return;
-      
       e.preventDefault();
-      const rect = gridRef.current.getBoundingClientRect();
-      const pivotX = e.clientX - rect.left;
-      const pivotY = e.clientY - rect.top;
+      const container = gridRef.current as HTMLElement;
+      const rect = container.getBoundingClientRect();
+      const pivotX = e.clientX - rect.left + container.scrollLeft;
+      const pivotY = e.clientY - rect.top + container.scrollTop;
+      const oldScale = appState.zoomMgr.scale;
       const delta = e.deltaY > 0 ? 1/1.1 : 1.1;
-      
-      appState.zoomMgr.zoom(delta, pivotX, pivotY);
+      appState.zoomMgr.zoom(delta, pivotX / oldScale, pivotY / oldScale); // zoom manager still expects sheet-space pivot
+      const newScale = appState.zoomMgr.scale;
+      // Maintain pivot focus: compute new scroll so that sheet-space pivot stays under cursor
+      const scaleRatio = newScale / oldScale;
+      container.scrollLeft = pivotX * scaleRatio - (e.clientX - rect.left);
+      container.scrollTop = pivotY * scaleRatio - (e.clientY - rect.top);
       forceUpdate();
     };
 
@@ -330,18 +335,35 @@ function App() {
           </div>
 
           {/* Center Panel - Grid */}
-          <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-            <div ref={gridRef} style={{ width: '100%', height: '100%', background: hasAnySheetLoaded ? 'transparent' : '#e0e0e0', cursor: isPanningRef.current ? 'grabbing' : 'grab' }}>
-              {!hasAnySheetLoaded && (
-                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#666', fontSize: '18px' }}>Open a sprite sheet to get started</div>
-              )}
-              {hasAnySheetLoaded && activeSheet && (
-                <div style={{ position: 'absolute', left:0, top:0, width: activeSheet.sheet.width, height: activeSheet.sheet.height, transform: `translate(${appState.zoomMgr.offsetX}px, ${appState.zoomMgr.offsetY}px) scale(${appState.zoomMgr.scale})`, transformOrigin: '0 0' }}>
+          <div style={{ flex: 1, position: 'relative', overflow: 'auto' }} ref={gridRef as any}>
+            {/* Scroll container holds a sized box we scale; scrollbars provide navigation */}
+            {!hasAnySheetLoaded && (
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#666', fontSize: '18px' }}>Open a sprite sheet to get started</div>
+            )}
+            {hasAnySheetLoaded && activeSheet && (
+              <div
+                style={{
+                  position: 'relative',
+                  width: activeSheet.sheet.width * appState.zoomMgr.scale,
+                  height: activeSheet.sheet.height * appState.zoomMgr.scale
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    width: activeSheet.sheet.width,
+                    height: activeSheet.sheet.height,
+                    transform: `scale(${appState.zoomMgr.scale})`,
+                    transformOrigin: '0 0'
+                  }}
+                >
                   <img src={activeSheet.image.src} style={{ position: 'absolute', left:0, top:0, width: activeSheet.sheet.width, height: activeSheet.sheet.height, userSelect:'none', pointerEvents:'none' }} />
                   {renderGrid(activeSheet)}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Right Panel - Properties */}
