@@ -139,4 +139,25 @@ export class AppStateManager {
     this.zoomMgr.reset();
     Object.keys(this.sheetAnalysisCache).forEach(key => delete this.sheetAnalysisCache[key]);
   }
+
+  serializeSlices(): Record<string, any[]> {
+    const out: Record<string, any[]> = {};
+    this.sheets.forEach(ctx => {
+      // For now a single global sliceStore; future: per-sheet store mapping
+      out[ctx.sheet.path] = this.sliceStore.toJSON();
+    });
+    return out;
+  }
+
+  loadSlices(data: Record<string, any[]>) {
+    if (!data || typeof data !== 'object') return;
+    // naive: merge all slices from provided sheet path arrays into global store
+    Object.keys(data).forEach(path => {
+      const arr = data[path];
+      if (Array.isArray(arr)) {
+        const loaded = SliceStore.fromJSON(arr); // new instance
+        loaded.all().forEach((s) => this.sliceStore.restore(s));
+      }
+    });
+  }
 }
