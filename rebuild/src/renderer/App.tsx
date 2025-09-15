@@ -316,11 +316,17 @@ function App() {
           onToggleSlices={() => setShowSlices(v => !v)}
           onPivotStrategyChange={handlePivotStrategyChange}
           onZoomReset={handleZoomReset}
-          extraButtons={<button onClick={() => {
-            const next = theme === 'dark' ? 'light' : 'dark';
-            (window as any).api.send('theme:set', next);
-            setTheme(next);
-          }}>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</button>}
+          extraButtons={<div style={{ display:'flex', gap:4 }}>
+            <button onClick={() => { const next = theme === 'dark' ? 'light' : 'dark'; (window as any).api.send('theme:set', next); setTheme(next); }}>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</button>
+            <button onClick={runAutoTrim} title="Auto-trim selected frames">Auto Trim</button>
+            <select value={pivotStrategy} onChange={e=> setPivotStrategy(e.target.value as PivotStrategy)} title="Pivot strategy">
+              <option value="bottom-center">Bottom Center</option>
+              <option value="center">Center</option>
+              <option value="top-left">Top Left</option>
+              <option value="top-right">Top Right</option>
+            </select>
+            <button onClick={runAutoPivot} title="Auto pivot selected frames">Apply Pivot</button>
+          </div>}
         />
 
         <div style={{ flex: 1, display: 'flex' }}>
@@ -364,16 +370,6 @@ function App() {
                   height: activeSheet.sheet.height * appState.zoomMgr.scale
                 }}
               >
-                <div style={{ position:'absolute', zIndex:20, top:4, left:4, display:'flex', alignItems:'center', gap:4, background:'rgba(255,255,255,0.6)', padding:4, borderRadius:4, fontSize:10 }}>
-                  <button style={{ fontSize:10 }} onClick={runAutoTrim} title="Auto-trim selected frames">Auto Trim</button>
-                  <select value={pivotStrategy} onChange={e=> setPivotStrategy(e.target.value as PivotStrategy)} title="Pivot strategy">
-                    <option value="bottom-center">Bottom Center</option>
-                    <option value="center">Center</option>
-                    <option value="top-left">Top Left</option>
-                    <option value="top-right">Top Right</option>
-                  </select>
-                  <button style={{ fontSize:10 }} onClick={runAutoPivot} title="Auto pivot selected frames">Apply Pivot</button>
-                </div>
                 <div
                   style={{
                     position: 'absolute',
@@ -387,6 +383,19 @@ function App() {
                 >
                   <img src={activeSheet.image.src} style={{ position: 'absolute', left:0, top:0, width: activeSheet.sheet.width, height: activeSheet.sheet.height, userSelect:'none', pointerEvents:'none' }} />
                   {renderGrid(activeSheet)}
+                  {/* Trim & pivot overlays */}
+                  {showTrim && activeSheet.sheet.allFrameRects().map(fr => {
+                    const store = appState.overrides.getSheet(activeSheet.sheet.path);
+                    const tr = store.getTrim(fr.index);
+                    if (!tr) return null;
+                    return <div key={'trim-'+fr.index} style={{ position:'absolute', left: tr.x, top: tr.y, width: tr.w, height: tr.h, border:'1px solid cyan', pointerEvents:'none', boxSizing:'border-box' }} />;
+                  })}
+                  {showPivot && activeSheet.sheet.allFrameRects().map(fr => {
+                    const store = appState.overrides.getSheet(activeSheet.sheet.path);
+                    const pv = store.getPivot(fr.index);
+                    if (!pv) return null;
+                    return <div key={'pivot-'+fr.index} style={{ position:'absolute', left: pv.x-2, top: pv.y-2, width:4, height:4, background:'fuchsia', border:'1px solid #000', borderRadius:'50%', pointerEvents:'none' }} />;
+                  })}
                 </div>
               </div>
             )}
