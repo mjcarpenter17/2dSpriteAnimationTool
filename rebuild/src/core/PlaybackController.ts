@@ -20,6 +20,8 @@ export class PlaybackController {
   play() { if (this.anim) this.state.playing = true; }
   pause() { this.state.playing = false; }
   toggle() { this.state.playing = !this.state.playing && !!this.anim; }
+  setLoop(loop: boolean) { if (this.anim) this.anim.loop = loop; }
+  isLooping(): boolean { return !!this.anim && this.anim.loop; }
   isPlaying() { return this.state.playing; }
   currentFrameGlobalIndex(): number | null {
     if (!this.anim) return null; const ref = this.anim.frames[this.state.currentFrameIndex]; return ref ? ref.frameIndex : null;
