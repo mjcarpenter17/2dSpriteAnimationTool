@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { SpriteSheet } from '../core/SpriteSheet';
 import { SelectionManager } from '../core/SelectionManager';
-import { FrameAnalyzer } from '../core/FrameAnalyzer';
+import { FrameAnalyzer, PivotStrategy } from '../core/FrameAnalyzer';
 import { AppStateManager, SheetContext } from './AppStateManager';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { StatusBar } from './components/StatusBar';
@@ -53,6 +53,75 @@ function App() {
 
   // Force re-render helper
   const forceUpdate = useCallback(() => setVersion(v => v + 1), []);
+
+  // Auto operations ---------------------------------------------------------
+  const autoTrimSelected = () => {
+    const sheetCtx = appState.getActiveSheet();
+    if (!sheetCtx) return;
+    const sel = sheetCtx.selection.order.length ? sheetCtx.selection.order : [];
+    if (!sel.length) return;
+    const { sheet, image } = sheetCtx;
+    const canvas = document.createElement('canvas');
+    canvas.width = sheet.width; canvas.height = sheet.height;
+    const ctx = canvas.getContext('2d'); if (!ctx) return;
+    ctx.drawImage(image, 0, 0);
+    const pixels = ctx.getImageData(0, 0, sheet.width, sheet.height).data as Uint8ClampedArray;
+    const store = appState.overrides.getSheet(sheet.path);
+    const before: Record<number, any> = {}; const after: Record<number, any> = {};
+    sel.forEach(idx => {
+      before[idx] = { trim: store.getTrim(idx) };
+      const fr = sheet.frameRect(idx); if (!fr) return;
+      const t = FrameAnalyzer.computeTrim(pixels, fr.w, fr.h, sheet.width, fr.x, fr.y, 1);
+      if (t) { store.setTrim(idx, { x: t.x, y: t.y, w: t.w, h: t.h }); after[idx] = { trim: t }; }
+    });
+    appState.commandStack.push({
+      label: 'Auto Trim',
+      do() {},
+      undo() {
+        const s = appState.overrides.getSheet(sheet.path);
+        sel.forEach(idx => {
+          const b = before[idx];
+          if (b.trim) s.setTrim(idx, b.trim); else { const entry = (s as any).frameMap?.get(idx); if (entry) delete entry.trim; }
+        });
+      }
+    });
+    // Push separate redo command state by re-applying after push (since we used do() no-op)
+    // Simplicity: not storing redo separately; user can undo only.
+    forceUpdate();
+  };
+
+  const autoPivotSelected = (strategy: PivotStrategy) => {
+    const sheetCtx = appState.getActiveSheet(); if (!sheetCtx) return;
+    const sel = sheetCtx.selection.order.length ? sheetCtx.selection.order : [];
+    if (!sel.length) return;
+    const { sheet, image } = sheetCtx;
+    const canvas = document.createElement('canvas'); canvas.width = sheet.width; canvas.height = sheet.height;
+    const ctx = canvas.getContext('2d'); if (!ctx) return; ctx.drawImage(image, 0, 0);
+    const pixels = ctx.getImageData(0, 0, sheet.width, sheet.height).data as Uint8ClampedArray;
+    const store = appState.overrides.getSheet(sheet.path);
+    const before: Record<number, any> = {}; const after: Record<number, any> = {};
+    sel.forEach(idx => {
+      before[idx] = { pivot: store.getPivot(idx) };
+      const fr = sheet.frameRect(idx); if (!fr) return;
+      let trim = store.getTrim(idx);
+      if (!trim) {
+        const t = FrameAnalyzer.computeTrim(pixels, fr.w, fr.h, sheet.width, fr.x, fr.y, 1);
+        if (t) trim = t;
+      }
+      const pv = FrameAnalyzer.computePivot(trim ? { x: trim.x, y: trim.y, w: trim.w, h: trim.h } : null, strategy, fr);
+      store.setPivot(idx, { x: pv.x, y: pv.y });
+      after[idx] = { pivot: { x: pv.x, y: pv.y } };
+    });
+    appState.commandStack.push({
+      label: 'Auto Pivot',
+      do() {},
+      undo() {
+        const s = appState.overrides.getSheet(sheet.path);
+        sel.forEach(idx => { const b = before[idx]; if (b.pivot) s.setPivot(idx, b.pivot); else { const entry = (s as any).frameMap?.get(idx); if (entry) delete entry.pivot; } });
+      }
+    });
+    forceUpdate();
+  };
 
   // Initialize app
   useEffect(() => {
@@ -348,6 +417,11 @@ function App() {
                   height: activeSheet.sheet.height * appState.zoomMgr.scale
                 }}
               >
+                <div style={{ position:'absolute', zIndex:20, top:4, left:4, display:'flex', gap:4, background:'rgba(255,255,255,0.6)', padding:2, borderRadius:4 }}>
+                  <button style={{ fontSize:10 }} onClick={autoTrimSelected} title="Auto-trim selected frames">Auto Trim</button>
+                  <button style={{ fontSize:10 }} onClick={() => autoPivotSelected('bottom-center')} title="Auto pivot bottom-center">Pivot BC</button>
+                  <button style={{ fontSize:10 }} onClick={() => autoPivotSelected('center')} title="Auto pivot center">Pivot C</button>
+                </div>
                 <div
                   style={{
                     position: 'absolute',
