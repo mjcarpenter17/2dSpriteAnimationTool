@@ -18,7 +18,8 @@
     "lint": "eslint \"src/**/*.ts?(x)\"",
     "typecheck": "tsc --noEmit",
     "test": "jest --passWithNoTests",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "benchmark": "node scripts/benchmark.js"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.8.0",

@@ -173,6 +173,102 @@ Phase 2 slice foundation tasks; Phase 3 Aseprite parser mapping.
 Central log of architectural and process decisions. Follow the template. Append new entries at the top (reverse chronological) for fast visibility. Keep entries concise; link to issues or PRs for depth.
 
 ---
+### 2025-09-15 Advanced Persistence Pruning Strategy
+Status: accepted
+Tags: data, persistence, memory
+Context:
+Need comprehensive cleanup strategy for override data that becomes stale due to grid parameter changes, sheet removals, or invalid geometry after user edits. Simple frame count filtering insufficient for production use.
+Options Considered:
+1. Basic frame index filtering only (existing).
+2. Multi-strategy pruning with configureable policies (chosen).
+3. Automatic background cleanup with heuristics.
+Decision:
+Implemented `pruneStaleOverrides()` with multiple strategies: frame range validation, geometry bounds checking, invalid coordinate removal, and empty entry cleanup. Added statistics tracking (`getStats()`, `getGlobalStats()`) for monitoring override memory usage and enabling data-driven cleanup decisions.
+Rejected Because:
+- (1) Leaves corrupted geometry and orphaned entries after complex editing sessions.
+- (3) Automatic cleanup risks removing user intent; explicit triggered cleanup safer.
+Consequences:
++ Comprehensive cleanup prevents override corruption and memory bloat.
++ Statistics enable monitoring and optimization decisions.
++ Configurable strategies allow adaptation to different usage patterns.
+- Additional complexity in pruning logic requiring validation.
+Follow-Up:
+Add UI control for manual override cleanup (e.g., "Clean Invalid Overrides" button in Properties panel); implement automatic cleanup trigger after sheet parameter changes exceed threshold.
+Related:
+Enhanced `FrameOverridesStore.pruneStaleOverrides()`, `getStats()` methods; global registry cleanup via `pruneEmptySheets()`.
+
+### 2025-09-15 Phase 2 UX Polish Implementation
+Status: accepted
+Tags: ui, ux, tooltips
+Context:
+Phase 2 closure required UX improvements: tooltips for override vs auto values, slice color legend, and enhanced user feedback for complex interactions.
+Options Considered:
+1. Minimal tooltips on major controls only.
+2. Comprehensive tooltips plus visual legends (chosen).
+3. Interactive help overlay system.
+Decision:
+Added descriptive tooltips to Toolbar controls explaining overlay functions, hotkeys, and auto vs manual precedence. Implemented slice color/type legend showing hit/hurt/attachment/custom types with visual indicators and interaction hints. Enhanced with usage instructions ("Shift+Click to create").
+Rejected Because:
+- (1) Insufficient for complex pivot strategy and slice type concepts.
+- (3) Over-engineered for current scope; tooltip system adequate.
+Consequences:
++ Improved discoverability of advanced features.
++ Clearer mental model of override precedence and slice semantics.
++ Reduced learning curve for new users.
+- Minor additional maintenance for tooltip accuracy.
+Follow-Up:
+Add tooltips to Properties panel inputs indicating override vs auto state; implement hover indicators on grid overlays showing value source.
+Related:
+Toolbar.tsx tooltip enhancements, App.tsx slice legend component.
+
+### 2025-09-15 Performance Monitoring Integration
+Status: accepted
+Tags: perf, monitoring, testing
+Context:
+Need systematic performance tracking and budget validation for analysis operations to prevent regression during feature development.
+Options Considered:
+1. Manual timing code scattered throughout codebase.
+2. Centralized monitoring with optional activation (chosen).
+3. Always-on performance tracking.
+Decision:
+Implemented `PerformanceMonitor` class with operation timing, cache hit rate tracking, and performance budget validation. Added micro-benchmark script (`npm run benchmark`) testing trim analysis, pivot calculation, and cache operations against defined budgets. Created cache invalidation policy documentation.
+Rejected Because:
+- (1) Inconsistent measurement and difficult maintenance.
+- (3) Performance overhead in production; monitoring should be opt-in.
+Consequences:
++ Systematic performance regression detection.
++ Data-driven optimization with concrete budgets.
++ Documentation of cache invalidation strategy for team alignment.
+- Additional instrumentation overhead when enabled.
+Follow-Up:
+Integrate performance monitoring into CI pipeline for automated budget validation; add runtime performance HUD for development debugging.
+Related:
+`PerformanceMonitor.ts`, `scripts/benchmark.js`, `docs/cache-invalidation-policy.md`.
+
+### 2025-09-15 Test Coverage Enhancement (Phase 2)
+Status: accepted
+Tags: test, quality, coverage
+Context:
+Phase 2 completion required additional test coverage for slice persistence and undo/redo operations to ensure data integrity and user workflow reliability.
+Options Considered:
+1. Basic smoke tests only.
+2. Comprehensive slice and undo round-trip testing (chosen).
+3. Full integration testing with UI automation.
+Decision:
+Added `SlicePersistence.test.ts` covering slice creation, timeline operations, serialization/deserialization, and edge cases. Implemented `UndoRedoRoundTrip.test.ts` testing command stack behavior, state consistency, and multi-operation sequences. Enhanced `FrameOverridesStore` with `clearPivot()`/`clearTrim()` methods for proper undo support.
+Rejected Because:
+- (1) Insufficient coverage for complex slice timeline and undo edge cases.
+- (3) UI automation premature; unit test coverage more valuable at this stage.
+Consequences:
++ High confidence in slice data integrity and undo/redo reliability.
++ Enhanced FrameOverridesStore API with proper clear operations.
++ Foundation for future UI testing with established test patterns.
+- Increased test maintenance overhead with complex state scenarios.
+Follow-Up:
+Add integration tests combining slice creation with undo/redo; implement property-based testing for timeline edge cases.
+Related:
+`SlicePersistence.test.ts`, `UndoRedoRoundTrip.test.ts`, enhanced `FrameOverridesStore` API.
+
 ### 2025-09-14 Animations Pane Refresh & Selection Ordering Model
 Status: accepted
 Tags: ui, data, workflow

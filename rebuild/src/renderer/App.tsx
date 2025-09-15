@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { SpriteSheet } from '../core/SpriteSheet';
 import { SelectionManager } from '../core/SelectionManager';
 import { FrameAnalyzer } from '../core/FrameAnalyzer';
+import { SliceType } from '../core/Slices';
 import { AppStateManager, SheetContext } from './AppStateManager';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { StatusBar } from './components/StatusBar';
@@ -470,6 +471,35 @@ function App() {
                       <span style={{ fontSize: 9, color: '#555' }}>ms</span>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Slice Legend */}
+            {showSlices && (
+              <div style={{ marginTop: '16px' }}>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '12px' }}>Slice Types</h4>
+                <div style={{ fontSize: '10px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  {(['hit', 'hurt', 'attachment', 'custom'] as SliceType[]).map(type => {
+                    const colors = { hit: '#f44', hurt: '#fa4', attachment: '#4af', custom: '#6cf' };
+                    return (
+                      <div key={type} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div 
+                          style={{ 
+                            width: '12px', 
+                            height: '12px', 
+                            background: colors[type], 
+                            border: '1px solid #666',
+                            borderRadius: '2px'
+                          }}
+                        />
+                        <span style={{ textTransform: 'capitalize' }}>{type}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: '9px', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
+                  Shift+Click to create • Click to select • Drag to move/resize
                 </div>
               </div>
             )}
