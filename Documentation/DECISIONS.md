@@ -173,6 +173,167 @@ Phase 2 slice foundation tasks; Phase 3 Aseprite parser mapping.
 Central log of architectural and process decisions. Follow the template. Append new entries at the top (reverse chronological) for fast visibility. Keep entries concise; link to issues or PRs for depth.
 
 ---
+### 2025-09-14 Animations Pane Refresh & Selection Ordering Model
+Status: accepted
+Tags: ui, data, workflow
+Context:
+Needed a structured Animations Pane with deterministic ordering and a refresh action (F5) without forcing full window reload. Also required a clear policy for maintaining user selection order when creating animations so resulting animations reflect intentional frame sequencing.
+Options Considered:
+1. Implicit browser reload on F5 relying on dev tooling (risk: state loss).
+2. Internal refresh token increment (chosen) decoupled from global reload.
+3. Event bus broadcast to pane component.
+Selection Ordering:
+1. Sort numerically ascending at animation creation time.
+2. Preserve user click order (chosen).
+3. Preserve order but dedupe by keeping first occurrence only.
+Decision:
+Implemented `AnimationsPane` component reading from `AnimationStore`. Pressing F5 intercepts default, increments a local `animVersion` refresh token causing the list to re-render (extensible to sources later). Selection order preserved exactly as captured by `SelectionManager.order` when creating an animation; frames appended in that order with default duration. Read-only badge placeholder added for future Aseprite integration (currently always false) to minimize future diff.
+Rejected Because:
+- Browser reload (1) would discard unsaved in-memory edits, harming workflow.
+- Event bus (3) premature complexity; token suffices for now.
+- Numeric sort for selection (selection option 1) erases semantic ordering (e.g., custom non-linear frame sequences).
+Consequences:
++ Fast refresh cycle without state loss.
++ Deterministic user‑intent frame sequencing.
++ Minimal architectural footprint; easy to extend to multi-source merging.
+- Requires future adaptation when external plugins push animation updates asynchronously.
+- Potential duplicate frame indices allowed (intentional flexibility) until a validation layer is added.
+Follow-Up:
+- Add decision entry for multi-source merge ordering once Aseprite source lands.
+- Introduce optional duplicate frame warning in Properties panel.
+Related:
+`App.tsx` (`animVersion`), `AnimationsPane.tsx`, `SelectionManager` ordering semantics.
+
+
+### 2025-09-14 CSS Background Property Separation
+Status: accepted
+Tags: ui, build, fix
+Context:
+React warned about mixing background shorthand property with specific background properties (backgroundPosition, backgroundSize) in grid rendering, causing console warnings and potential styling conflicts.
+Options Considered:
+1. Keep background shorthand and remove specific properties.
+2. Remove background shorthand and use only specific properties (chosen).
+3. Restructure CSS to avoid conflicts.
+Decision:
+Separated CSS background properties in styles.css, using backgroundImage, backgroundPosition, backgroundSize, and backgroundRepeat instead of the shorthand background property. This eliminates React warnings and provides more explicit control over background styling.
+Rejected Because:
+- (1) Would lose fine-grained control over background positioning needed for grid alignment.
+- (3) Would require more extensive CSS restructuring without clear benefit.
+Consequences:
++ Eliminates React console warnings.
++ More explicit and maintainable CSS properties.
++ Better control over individual background aspects.
+- Slightly more verbose CSS syntax.
+Follow-Up:
+Monitor for any other CSS shorthand vs specific property conflicts in future styling work.
+Related:
+Grid rendering implementation in App.tsx, styles.css background properties.
+
+### 2025-09-14 ES6 Import Migration from CommonJS
+Status: accepted
+Tags: build, arch, fix
+Context:
+Runtime error "ReferenceError: require is not defined" occurred when trying to use CommonJS require() syntax in Electron renderer process, which expects ES6 modules by default in the current Vite configuration.
+Options Considered:
+1. Configure Vite to support CommonJS require() calls.
+2. Convert all imports to ES6 import syntax (chosen).
+3. Use dynamic import() for conditional loading.
+Decision:
+Migrated all CommonJS require() calls to ES6 import statements. Changed `require('../core/SelectionManager').SelectionManager` to `import { SelectionManager } from '../core/SelectionManager'` and similar patterns throughout the codebase.
+Rejected Because:
+- (1) Would add build complexity and go against modern ES6 standards.
+- (3) Unnecessary for static imports; adds complexity without benefit.
+Consequences:
++ Aligns with modern JavaScript standards and Vite expectations.
++ Eliminates runtime errors in renderer process.
++ Consistent import syntax across the codebase.
++ Better tree-shaking and bundling optimization.
+- Required updating multiple import statements across files.
+Follow-Up:
+Ensure all new code uses ES6 import syntax; add linting rule to prevent CommonJS usage if needed.
+Related:
+App.tsx imports, SelectionManager integration, Vite build configuration.
+
+### 2025-09-14 Component Extraction Architecture
+Status: accepted
+Tags: arch, ui, refactor
+Context:
+The original index.tsx had grown to 706 lines with a monolithic structure containing UI components, state management, and application logic all mixed together, making it difficult to maintain and test.
+Options Considered:
+1. Keep monolithic structure and just clean up code organization.
+2. Extract only the largest components (StatusBar, Toolbar).
+3. Full component extraction with centralized state management (chosen).
+Decision:
+Extracted multiple components (StatusBar, Toolbar, ErrorBoundary) into separate files in a components/ directory and created a centralized AppStateManager for state coordination. Moved main application logic to App.tsx and reduced index.tsx to a simple entry point.
+Rejected Because:
+- (1) Would not address fundamental maintainability issues and testing complexity.
+- (2) Partial extraction would leave significant coupling and maintenance burden.
+Consequences:
++ Dramatically improved code maintainability and readability.
++ Enables individual component testing and reuse.
++ Clear separation of concerns between UI, state, and application logic.
++ Reduced file complexity from 706 lines to manageable component sizes.
++ Better TypeScript type safety with component-specific interfaces.
+- Required significant refactoring effort and careful state management coordination.
+- More files to manage in the project structure.
+Follow-Up:
+Continue extracting additional components as they grow in complexity; establish component testing patterns.
+Related:
+AppStateManager.ts creation, components/ directory structure, App.tsx main component.
+
+### 2025-09-14 Centralized State Management Implementation
+Status: accepted
+Tags: arch, data, refactor
+Context:
+The monolithic structure had global variables and scattered state management across the large index.tsx file, making it difficult to track state changes and coordinate between different parts of the application.
+Options Considered:
+1. Keep global variables and add better organization.
+2. Use React Context for state management.
+3. Create dedicated state management classes (chosen).
+Decision:
+Implemented AppStateManager.ts with specialized classes (CommandStack, ZoomManager, AnalysisCache) to centralize state management. Created a global appState instance that coordinates sheet management, commands, zoom, and caching operations.
+Rejected Because:
+- (1) Would not solve coordination and tracking issues inherent in scattered global state.
+- (2) React Context would be overkill for this application's state complexity and could impact performance.
+Consequences:
++ Clear state ownership and modification patterns.
++ Easier debugging and state tracking.
++ Better separation between UI and business logic.
++ Foundation for future undo/redo and advanced state management features.
++ Type-safe state operations with TypeScript.
+- Added complexity in state coordination between manager and components.
+- Required careful interface design between state manager and UI components.
+Follow-Up:
+Expand state management patterns as new features are added; consider state persistence strategies.
+Related:
+AppStateManager.ts implementation, CommandStack class, ZoomManager class, global appState instance.
+
+### 2025-09-14 Test Suite Fixes and Validation
+Status: accepted
+Tags: test, fix, validation
+Context:
+After refactoring, the test suite had failures due to changes in component structure and incorrect test assumptions about frame positioning calculations.
+Options Considered:
+1. Skip failing tests temporarily.
+2. Update tests to match new architecture (chosen).
+3. Rewrite entire test suite.
+Decision:
+Fixed specific test failures by updating SpriteSheetGrid.test.ts to use correct frame height calculations (32px to 64px) and ensured all 17 tests pass after refactoring. Maintained existing test coverage while adapting to new component structure.
+Rejected Because:
+- (1) Would leave validation gaps and technical debt.
+- (3) Would be excessive given that most tests were still valid with minor adjustments.
+Consequences:
++ Maintained test coverage and validation confidence.
++ Ensured refactored code meets existing quality standards.
++ Identified and corrected assumptions about frame calculations.
++ 100% test pass rate validates refactoring success.
+- Required careful analysis of test failures to determine correct fixes.
+Follow-Up:
+Add tests for new components (StatusBar, Toolbar, ErrorBoundary); expand test coverage for state management.
+Related:
+SpriteSheetGrid.test.ts fixes, Jest test suite, frame calculation validation.
+
+---
 
 ### 2025-09-12 Rebuild Stack Selection (Electron + TypeScript + React)
 Status: accepted

@@ -23,6 +23,9 @@ export type Preferences = {
       }
     }
   };
+  slices?: { // per sheet path -> slice array (SliceStore.toJSON())
+    [sheetPath: string]: any[];
+  };
 };
 
 const DEFAULTS: Preferences = {
@@ -90,6 +93,15 @@ export class PreferencesManager {
 
   setOverrides(next: NonNullable<Preferences['overrides']>) {
     this.data.overrides = next;
+    this.save();
+  }
+
+  getSlices(): NonNullable<Preferences['slices']> {
+    return this.data.slices || {};
+  }
+
+  setSlices(next: NonNullable<Preferences['slices']>) {
+    this.data.slices = next;
     this.save();
   }
 }

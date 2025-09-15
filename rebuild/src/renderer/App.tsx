@@ -7,6 +7,7 @@ import { AppStateManager, SheetContext } from './AppStateManager';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
+import { AnimationsPane } from './components/AnimationsPane';
 import './styles.css';
 
 // Global app state instance
@@ -24,6 +25,7 @@ function App() {
   const [activeSliceId, setActiveSliceId] = useState<string | null>(null);
   const [newAnimName, setNewAnimName] = useState('anim1');
   const [activeAnimName, setActiveAnimName] = useState<string | null>(null);
+  const [durationEditVersion, setDurationEditVersion] = useState(0);
   const [playbackTick, setPlaybackTick] = useState(0);
 
   // Refs
@@ -170,7 +172,7 @@ function App() {
         setShowPivot(v => !v);
       } else if (e.key === 'F5') {
         e.preventDefault();
-        setAnimVersion(a => a + 1);
+        setAnimVersion(a => a + 1); // triggers animations list refresh re-render
       }
       // Add more keyboard shortcuts as needed
     };
@@ -288,6 +290,7 @@ function App() {
 
   // Get current state for display
   const activeSheet = appState.getActiveSheet();
+  const activeAnimation = activeAnimName ? appState.animationStore.all().find(a => a.name === activeAnimName) || null : null;
   const hasAnySheetLoaded = appState.sheets.length > 0;
   const commandCounts = appState.commandStack.counts();
 
@@ -308,24 +311,29 @@ function App() {
 
         <div style={{ flex: 1, display: 'flex' }}>
           {/* Left Panel - Animations */}
-          <div style={{ width: '200px', background: '#f5f5f5', borderRight: '1px solid #ddd', padding: '8px' }}>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '14px' }}>Animations</h3>
-            <input
-              type="text"
-              value={newAnimName}
-              onChange={(e) => setNewAnimName(e.target.value)}
-              placeholder="Animation name"
-              style={{ width: '100%', marginBottom: '4px' }}
+          <div style={{ width: '200px', background: '#f5f5f5', borderRight: '1px solid #ddd', padding: '8px', boxSizing: 'border-box' }}>
+            <AnimationsPane
+              animations={appState.animationStore.all()}
+              activeSheetPath={activeSheet?.sheet.path || null}
+              onCreate={(name) => {
+                if (!activeSheet) return;
+                const selectionOrder = activeSheet.selection.order;
+                if (selectionOrder.length === 0) {
+                  setStatusMsg('Select frames before creating an animation');
+                  return;
+                }
+                const anim = appState.animationStore.createFromSelection(name, activeSheet.sheet.path, selectionOrder);
+                setActiveAnimName(anim.name);
+                setNewAnimName(prev => prev === name ? name + '_1' : prev); // simple name progression
+                setAnimVersion(a => a + 1); // refresh list
+                setStatusMsg(`Created animation '${anim.name}' (${anim.frames.length} frames)`);
+              }}
+              onSelect={(name) => setActiveAnimName(name)}
+              activeAnimation={activeAnimName}
+              newAnimName={newAnimName}
+              onNewNameChange={setNewAnimName}
+              refreshToken={animVersion}
             />
-            <button style={{ width: '100%', marginBottom: '8px' }}>
-              Create Animation
-            </button>
-            <div style={{ fontSize: '12px' }}>
-              {/* Animation list would go here */}
-              {activeSheet && (
-                <div>Active: {activeSheet.sheet.path.split('/').pop()}</div>
-              )}
-            </div>
           </div>
 
           {/* Center Panel - Grid */}
@@ -386,6 +394,9 @@ function App() {
                     value={activeSheet.sheet.params.tileWidth} 
                     onChange={(e) => {
                       activeSheet.sheet.setParams({ tileWidth: parseInt(e.target.value) || 32 });
+                      // Prune overrides invalidated by reduced frame count
+                      const count = activeSheet.sheet.frameCount();
+                      appState.overrides.getSheet(activeSheet.sheet.path).pruneInvalid((idx)=> idx < count);
                       forceUpdate();
                     }}
                   />
@@ -395,6 +406,8 @@ function App() {
                     value={activeSheet.sheet.params.tileHeight} 
                     onChange={(e) => {
                       activeSheet.sheet.setParams({ tileHeight: parseInt(e.target.value) || 32 });
+                      const count = activeSheet.sheet.frameCount();
+                      appState.overrides.getSheet(activeSheet.sheet.path).pruneInvalid((idx)=> idx < count);
                       forceUpdate();
                     }}
                   />
@@ -404,6 +417,8 @@ function App() {
                     value={activeSheet.sheet.params.margin} 
                     onChange={(e) => {
                       activeSheet.sheet.setParams({ margin: parseInt(e.target.value) || 0 });
+                      const count = activeSheet.sheet.frameCount();
+                      appState.overrides.getSheet(activeSheet.sheet.path).pruneInvalid((idx)=> idx < count);
                       forceUpdate();
                     }}
                   />
@@ -413,12 +428,51 @@ function App() {
                     value={activeSheet.sheet.params.spacing} 
                     onChange={(e) => {
                       activeSheet.sheet.setParams({ spacing: parseInt(e.target.value) || 0 });
+                      const count = activeSheet.sheet.frameCount();
+                      appState.overrides.getSheet(activeSheet.sheet.path).pruneInvalid((idx)=> idx < count);
                       forceUpdate();
                     }}
                   />
                 </div>
               )}
             </div>
+
+            {activeAnimation && (
+              <div style={{ marginTop: '16px' }}>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '12px' }}>Animation: {activeAnimation.name}</h4>
+                <div style={{ fontSize: '11px', marginBottom: 4 }}>Total Duration: {activeAnimation.totalDuration()} ms</div>
+                <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid #ccc', padding: 4, borderRadius: 4, background:'#fff' }}>
+                  {activeAnimation.frames.map((f, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                      <span style={{ width: 30, textAlign: 'right' }}>#{idx}</span>
+                      <span style={{ width: 50 }}>F{f.frameIndex}</span>
+                      <input
+                        type="number"
+                        value={f.durationMs}
+                        min={1}
+                        style={{ width: 70 }}
+                        onChange={(e) => {
+                          const raw = parseInt(e.target.value, 10);
+                          const newVal = isNaN(raw) ? f.durationMs : Math.max(1, Math.min(10000, raw));
+                          if (newVal === f.durationMs) return;
+                          // Capture old value for undo
+                          const oldVal = f.durationMs;
+                          const frameRef = f;
+                          appState.commandStack.push({
+                            label: 'Set Frame Duration',
+                            do() { frameRef.durationMs = newVal; },
+                            undo() { frameRef.durationMs = oldVal; }
+                          });
+                          setDurationEditVersion(v => v + 1);
+                          forceUpdate();
+                        }}
+                      />
+                      <span style={{ fontSize: 9, color: '#555' }}>ms</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
